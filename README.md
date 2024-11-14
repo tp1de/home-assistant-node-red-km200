@@ -28,3 +28,13 @@ add :
 
   },
 
+
+in node-red the following module needs to installed using pellet manager: node-red-contrib-timerswitch
+
+
+
+
+
+The flow will create the following devices within MQTT:
+
+![alt text](image-1.png)
