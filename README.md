@@ -56,7 +56,7 @@ This needs only to be done once.
 The recordings need a file recordings.json which is a copy of km200.json you need to prepare by selecting the entities you need and changing the names to your wish.
 I put my example file here: https://github.com/tp1de/home-assistant-node-red-km200/blob/main/recordings.json
 
-** Do not create the recordings.json file short before full hour to avoid running the hourly jobs before you have initialized the data once !!! **
+**Do not create the recordings.json file short before full hour to avoid running the hourly jobs before you have initialized the data once !!!**
 
 You then need to run the last flow once to read all available records and inset them into the statistics database.
 When this done every hour updates (new entries) are added. This is done 2 minutes pas every hour. (km200 needs to prepare the data first).
