@@ -1,0 +1,23 @@
+# km200 gateway attributes: 
+# gwpw: {gateway password} - sticker on boiler of gateway
+# ppw:  {private password} - pw set by using myDevice App
+
+- name: km200
+  ip: http://192.168.178.xx
+  gwpw: xxxx-xxxx-xxxx-xxxx 
+  ppw:  xxxxxxxxxx
+
+
+# mariadb attributes & login
+
+- name: db
+  host: core-mariadb
+  user: homeassistant
+  password: homeassistant
+  database: homeassistant
+  
+
+# home assistant api server and ha token 
+
+- server: http://localhost:8123/api/
+- token:  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
