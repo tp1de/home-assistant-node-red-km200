@@ -13,13 +13,18 @@ Node-Red Config: Add 4 npm packages: rijndael-js, crypto, axios, mysql2
 
 
 Node-red settings:  /addon_configs/a0d7b954_nodered/settings.js
+
 add :
 
   functionGlobalContext: {
+
     rijndael:require("rijndael-js"),
+
     crypto:require("crypto"),
+
     axios:require("axios"),
+
     mysql2:require("mysql2/promise"),
-    // os:require('os'),
+
   },
 
