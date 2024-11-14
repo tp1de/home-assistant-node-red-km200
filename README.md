@@ -18,16 +18,16 @@ The following technical prerequisites are needed:
 
 4.	Node-Red needs 4 additional modules to be installed and referenced in functionGlobalContext in /addon_configs/a0d7b954_nodered/settings.js
 
-To access this file I recommend to install the file editor addon. (Config: Enforce Basepath to false)
-(approx. line 155)
+  To access this file I recommend to install the file editor addon. (Config: Enforce Basepath to false)
+  (approx. line 155)
 
- functionGlobalContext: {
-
-    rijndael:require("rijndael-js"),
-    crypto:require("crypto"),
-    axios:require("axios"),
-    mysql2:require("mysql2/promise"),
-  },
+    functionGlobalContext: {
+   
+       rijndael:require("rijndael-js"),
+       crypto:require("crypto"),
+       axios:require("axios"),
+       mysql2:require("mysql2/promise"),
+     },
 
 and the npm modules in Node-Red Config and restart NR.
 
