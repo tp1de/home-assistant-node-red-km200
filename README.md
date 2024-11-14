@@ -48,6 +48,13 @@ The flow should be disabled - you need to enable manually.
 
 *** 
 
+When enabled the first flow (from top) should start and detect all available entities and recordings.
+The entities are created with mqtt discovery.
+
+The second flow creates a file km200.json containing all recordings. (wait until they are found) 
+This needs only to be done once.
+The recordings need a file recordings.json which is a copy of km200.json you need to prepare by selecting the entities you need and changing the names to your wish.
+I put my example file here: 
 
 
 
