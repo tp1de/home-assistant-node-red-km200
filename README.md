@@ -33,7 +33,7 @@ in node-red the following module needs to installed using pellet manager: node-r
 
 The flow will create the following devices within MQTT:
 
-![alt text](image-1.png)
+![alt text](image-3.png)
 
 
 
