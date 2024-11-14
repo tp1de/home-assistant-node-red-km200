@@ -53,6 +53,8 @@ The flow should be disabled - you need to enable manually.
 
 When enabled the first flow (from top) should start and detect all available entities and recordings.
 The entities are created with mqtt discovery. 
+In some cases there are no recordings detected. Then you might try to start the flow manually again.
+The km200 gateway is very slow and sometimes overloaded.
 
 The second flow creates a file km200.json containing all recordings. (wait until they are found) 
 This needs only to be done once.
