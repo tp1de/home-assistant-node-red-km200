@@ -1,0 +1,804 @@
+[
+    {
+        "id": "8a416cbc6ae4e029",
+        "type": "tab",
+        "label": "km200",
+        "disabled": true,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "1d948a920d4ce6b6",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "global variables ",
+        "func": "const crypto = global.get(\"crypto\");\nconst Rijndael = global.get(\"rijndael\");\n\nconst km200_crypt_md5_salt = new Uint8Array([\n    0x86, 0x78, 0x45, 0xe9, 0x7c, 0x4e, 0x29, 0xdc,\n    0xe5, 0x22, 0xb9, 0xa7, 0xd3, 0xa3, 0xe0, 0x7b,\n    0x15, 0x2b, 0xff, 0xad, 0xdd, 0xbe, 0xd7, 0xf5,\n    0xff, 0xd8, 0x42, 0xe9, 0x89, 0x5a, 0xd1, 0xe4\n]);\n\nfor (let i = 0; i < msg.payload.length; i++) {\n    let m = msg.payload[i];\n\n    if (m.server != undefined) global.set(\"server\", m.server);\n    if (m.token != undefined) global.set(\"token\", m.token);\n\n    if (m.ip       != undefined) msg.km200_ip = m.ip;\n    if (m.gwpw     != undefined) msg.km200_gwpw = m.gwpw;\n    if (m.ppw      != undefined) msg.km200_ppw = m.ppw;\n\n    if (m.name != undefined) global.set(\"km200_ip\", m.name);\n    if (m.host != undefined) global.set(\"dbhost\", m.host);\n    if (m.user != undefined) global.set(\"dbuser\", m.user);\n    if (m.password != undefined) global.set(\"dbpw\", m.password);\n    if (m.database != undefined) global.set(\"db\", m.database);    \n}\n\nglobal.set(\"km200_ip\", msg.km200_ip);\n//node.status({ fill: \"green\", shape: \"ring\", text: msg.km200_ip + \": \" + msg.km200_gwpw + \" --- \" + msg.km200_ppw });\nnode.status({ fill: \"green\", shape: \"ring\", text: msg.km200_ip });\n\nconst km200_key = km200_getAccesskey(msg.km200_gwpw, msg.km200_ppw);\nglobal.set(\"km200_key\", km200_key);\n\nconst km200_aeskey = Buffer.from(km200_key, 'hex');\nglobal.set(\"km200_aeskey\", km200_aeskey);\n\nconst cipher = new Rijndael(km200_aeskey, 'ecb');\nglobal.set(\"cipher\", cipher);\n\n\nreturn msg;\n\n\nfunction km200_getAccesskey(gatewaypassword, privatepassword) {\n            function md5(text) {\n                return crypto.createHash('md5').update(text).digest(\"hex\");\n            }\n\n            function str2ab(str) {\n                let buf = new ArrayBuffer(str.length * 1); // 2 bytes for each char\n                let bufView = new Uint8Array(buf);\n                for (let i = 0, strLen = str.length; i < strLen; i++) {\n                    bufView[i] = str.charCodeAt(i);\n                }\n                return bufView;\n            }\n\n            function concatUint8Array(array1, array2) {\n                const array3 = new Uint8Array(array1.length + array2.length);\n                for (let i = 0; i < array1.length; i++) {\n                    array3[i] = array1[i];\n                }\n                for (let i = 0; i < array2.length; i++) {\n                    array3[array1.length + i] = array2[i];\n                }\n                return array3;\n            }\n\n            gatewaypassword = gatewaypassword.replace(/-/g, '');\n            let km200_gateway_password = str2ab(gatewaypassword);\n            let km200_private_password = str2ab(privatepassword);\n            // Erste Hälfte des Schlüssels: MD5 von ( Gerätepasswort . Salt )\n            let key_1 = md5(concatUint8Array(km200_gateway_password, km200_crypt_md5_salt));\n            // Zweite Hälfte des Schlüssels - privat: MD5 von ( Salt . privates Passwort )\n            let key_2_private = md5(concatUint8Array(km200_crypt_md5_salt, km200_private_password));\n            let km200_crypt_key_private = key_1 + key_2_private;\n            return km200_crypt_key_private.trim().toLowerCase();\n}",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 120,
+        "wires": [
+            [
+                "155a8225b80c92b6"
+            ]
+        ]
+    },
+    {
+        "id": "155a8225b80c92b6",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "km200 states",
+        "func": "const axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");;\nlet km200_server = global.get(\"km200_ip\");\n\nnode.status({fill:\"green\",shape:\"ring\",text:\"starting state search\"});\n\nconst results = [];\nawait tree(\"heatSources\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"dhwCircuits\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"heatingCircuits\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"system\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"notifications\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"solarCircuits\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"ventilation\");\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"gateway\");\n\nnode.status({fill:\"green\",shape:\"ring\",text:\"finished: states found:\" + results.length});\n\nmsg.payload =  results;\nglobal.set(\"km200_states\",results);\nmsg.states = results;\n\nreturn msg;\n\nasync function tree(reference) {\n\ttry {\n\t\tconst data = await km200_get(reference);\n\t\t//msg.payload = data;\n\t\t//node.send(msg);\n\t\tif (data.type != \"refEnum\" && data != \"\") {\n\t\t\tconst element=data.id.substring(1).split(\"/\").join(\".\");\n\t\t\tresults.push({\"km200\":element,\"id\":data.id.substring(1),\"type\":data.type});\n\t\t} else {\n\t\t\tif(data != \"\") await refEnum(data);\n\t\t\t//if(data == \"\") ;\n\t\t}\n\t} catch(error) {msg.error = \"http error reading km200 tree entry \"+ reference + \" : \" + error;}\n}\n\nasync function refEnum(data){\n\tlet data1,field1,element;\n\tfor (let i=0;i < data.references.length;i++){\n\t\tfield1 =data.references[i].id.substring(1).split(\"/\").join(\".\");\n\t\ttry {data1 = await km200_get(field1);}\n\t\tcatch(error) {data1 = \"\";}\n\t\tif (data1 != \"\" && data1 != undefined) {\n\t\t\tif (data1.type != \"refEnum\") {\n\t\t\t\telement=data1.id.substring(1).split(\"/\").join(\".\");\n\t\t\t\tresults.push({\"km200\":element,\"id\":data1.id.substring(1),\"type\":data1.type});\n\t\t\t}\n\t\t\telse {await refEnum(data1);}\n\t\t}\n\t}\n}\n\n\nasync function km200_get(url) {\n\tconst urls = km200_server + \"/\" + url.split(\".\").join(\"/\") ;\n\tconst options =\n        {   url: urls,\n        \tmethod: \"GET\",\n        \tstatus: [200],\n        \ttimeout: 10000,\n        \tencoding: \"utf8\",\n        \tport: 80,\n        \theaders: {\"Accept\": \"application/json\", \"agent\": \"TeleHeater/2.2.3\", \"User-Agent\": \"TeleHeater/2.2.3\"}\n        };\n\n\tconst body = (await axios(options)).data\n\tlet data;\n\ttry { data = km200_decrypt(body); }\n\tcatch (e) {data = \"\";}\n\treturn data;\n}\n\nfunction km200_decrypt(input) {\n\t// Decrypt\n\tlet output;\n\ttry {\n\t\tlet s = Buffer.from(cipher.decrypt(Buffer.from(input,\"base64\"),16)).toString(\"utf8\");\n\t\twhile (s.charCodeAt(s.length - 1) === 0) s = s.slice(0, s.length - 1);\n\t\toutput = JSON.parse(s);\n\t} catch(e) {}\n\treturn output;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 120,
+        "wires": [
+            [
+                "45aad83e3fc43b53"
+            ]
+        ]
+    },
+    {
+        "id": "f1c9281c57aaf53a",
+        "type": "yaml",
+        "z": "8a416cbc6ae4e029",
+        "property": "payload",
+        "name": "",
+        "x": 390,
+        "y": 120,
+        "wires": [
+            [
+                "1d948a920d4ce6b6"
+            ]
+        ]
+    },
+    {
+        "id": "f548155ad2f61f76",
+        "type": "inject",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "/homeassistant/km200.yaml",
+        "payloadType": "str",
+        "x": 110,
+        "y": 120,
+        "wires": [
+            [
+                "1ffb757353918a2b"
+            ]
+        ]
+    },
+    {
+        "id": "1ffb757353918a2b",
+        "type": "file in",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "filename": "payload",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 260,
+        "y": 120,
+        "wires": [
+            [
+                "f1c9281c57aaf53a"
+            ]
+        ]
+    },
+    {
+        "id": "46177cbc1076bc06",
+        "type": "comment",
+        "z": "8a416cbc6ae4e029",
+        "name": "read config file and initialize global variables",
+        "info": "",
+        "x": 210,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "45aad83e3fc43b53",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "km200 recordings",
+        "func": "const axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");;\nlet km200_server = global.get(\"km200_ip\");\n\nnode.status({fill:\"green\",shape:\"ring\",text:\"starting state search\"});\n\nconst results = [];\nnode.status({fill:\"green\",shape:\"ring\",text:\"states found:\" + results.length});\nawait tree(\"recordings\");\n\nnode.status({fill:\"green\",shape:\"ring\",text:\"finished: states found:\" + results.length});\n\nmsg.payload =  results;\nglobal.set(\"km200_recordings\",results);\nreturn msg;\n\nasync function tree(reference) {\n\ttry {\n\t\tconst data = await km200_get(reference);\n\t\tif (data.type != \"refEnum\" && data != \"\") {\n\t\t\tresults.push({data});\n\t\t} else {\n\t\t\tif(data != \"\") await refEnum(data);\n\t\t}\n\t} catch(error) {msg.error = \"http error reading km200 tree entry \"+ reference + \" : \" + error;}\n}\n\nasync function refEnum(data){\n\tlet data1,field1,element;\n\tfor (let i=0;i < data.references.length;i++){\n\t\tfield1 =data.references[i].id.substring(1).split(\"/\").join(\".\");\n\t\ttry {data1 = await km200_get(field1);}\n\t\tcatch(error) {data1 = \"\";}\n\t\tif (data1 != \"\" && data1 != undefined) {\n\t\t\tif (data1.type != \"refEnum\") {\n\t\t\t\tresults.push(data1);\n\t\t\t}\n\t\t\telse {await refEnum(data1);}\n\t\t}\n\t}\n}\n\n\nasync function km200_get(url) {\n\tconst urls = km200_server + \"/\" + url.split(\".\").join(\"/\");\n\tconst options =\n\t{\n\t\turl: urls,\n\t\tmethod: \"GET\",\n\t\tstatus: [200],\n\t\ttimeout: 10000,\n\t\tencoding: \"utf8\",\n\t\tport: 80,\n\t\theaders: { \"Accept\": \"application/json\", \"agent\": \"TeleHeater/2.2.3\", \"User-Agent\": \"TeleHeater/2.2.3\" }\n\t};\n\n\tconst body = (await axios(options)).data\n\tlet data;\n\ttry { data = km200_decrypt(body); }\n\tcatch (e) { data = \"\"; }\n\treturn data;\n}\n\nfunction km200_decrypt(input) {\n\t// Decrypt\n\tlet output;\n\ttry {\n\t\tlet s = Buffer.from(cipher.decrypt(Buffer.from(input,\"base64\"),16)).toString(\"utf8\");\n\t\twhile (s.charCodeAt(s.length - 1) === 0) s = s.slice(0, s.length - 1);\n\t\toutput = JSON.parse(s);\n\t} catch(e) {}\n\treturn output;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "434ae76f7b8645b4",
+        "type": "file",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "filename": "/homeassistant/km200.json",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 580,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "716dc6abbd911a6b",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "Global get recordings",
+        "func": "let r = global.get(\"km200_recordings\");\n\nlet a = \"[\\n\"\nfor (let i=0;i<r.length;i++){\n        let id = r[i].id;\n    let uid = \"recordings:\" + id.split('/').join('_').substr(1);\n    let name = id.split('/').join('_').substr(12);\n\n    let o = {\"id\":id,\"uid\":uid,\"name\":name};    \n    if (i < r.length-1) a += JSON.stringify(o)+\",\\n\";\n    else a += JSON.stringify(o) + \"\\n\";\n}\na += \"]\";\nmsg.payload = a;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 200,
+        "wires": [
+            [
+                "434ae76f7b8645b4"
+            ]
+        ]
+    },
+    {
+        "id": "b52a67f33b009f83",
+        "type": "inject",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "120",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 200,
+        "wires": [
+            [
+                "716dc6abbd911a6b"
+            ]
+        ]
+    },
+    {
+        "id": "e07dd92798959e7b",
+        "type": "mqtt in",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "topic": "homeassistant/+/km200/#",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "55818f4589a91a79",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 540,
+        "wires": [
+            [
+                "4e160faf68b83e23"
+            ]
+        ]
+    },
+    {
+        "id": "4e160faf68b83e23",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "filter for /set",
+        "func": "let axios = global.get(\"axios\");\nlet server_mqtt = global.get(\"server\") + \"services/mqtt/publish\";\nlet server = global.get(\"server\") + \"states/\";\nlet bearer = \"Bearer \" + global.get(\"token\");\n\nlet t = msg.topic;\nlet value = msg.payload;\n\nlet ta = t.split(\"/\");\nlet last = ta[ta.length-1];\n\nif (last == \"set\") {\n    node.status({ fill: \"green\", shape: \"ring\", text: value});\n    \n    msg.topic = t.substring(0,t.length-3) + \"state\";\n    msg.payload = value;\n\n    let data = { \"payload\": value, \"topic\": msg.topic, \"retain\": \"True\" };\n    await postmqtt(JSON.stringify(data));\n    \n    return msg;\n}\n\n\nasync function postmqtt(data) {\n    const urls = server_mqtt;\n\n    let response = await axios({\n        method: 'post',\n        url: urls,\n        data: data,\n        headers: {\n            \"Authorization\": bearer,\n            \"content-type\": \"application/json\",\n        }\n    });\n    return response;\n}\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 540,
+        "wires": [
+            [
+                "df046432cc12e4f2"
+            ]
+        ]
+    },
+    {
+        "id": "df046432cc12e4f2",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "km200 state address",
+        "func": "let t = msg.topic;\nlet ta = t.split(\"/\");\nlet state = ta[ta.length-2];\n\n// create new payload\nvar msg_ = { payload: msg.payload.length };\n\nlet pl = msg.payload;\n\nif (isNaN(pl)) msg_.payload = pl;\nelse msg_.payload = parseFloat(pl);\nmsg_.topic = \"/\" + state.split('_').join('/');\nnode.status({ fill: \"green\", shape: \"ring\", text: msg_.topic + \": \" + msg.payload});\nreturn msg_;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 540,
+        "wires": [
+            [
+                "3081efdc8b82454a"
+            ]
+        ]
+    },
+    {
+        "id": "3081efdc8b82454a",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "Post km200 State",
+        "func": "const axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");\nlet km200_server = global.get(\"km200_ip\");\n\nconst urls = km200_server + msg.topic.split(\".\").join(\"/\");\nlet data = km200_encrypt(Buffer.from(JSON.stringify({ value: msg.payload })));\n\nmsg.response = await axios({\n\tmethod: 'post',\n\turl: urls,\n\tdata: data,\n\theaders: {\n\t\ttimeout: 20000,\n\t\tencoding: \"utf8\",\n\t\tport: 80,\n\t\t\"Accept\": \"application/json\",\n\t\t\"User-Agent\": \"TeleHeater/2.2.3\"\n\t}\n});\n\nreturn msg;\n\nfunction km200_encrypt(input) {  // Encrypt\n\tlet output;\n\ttry { output = Buffer.from(cipher.encrypt(input, 16)).toString(\"base64\"); }\n\tcatch (e) { }\n\treturn output;\n}\n\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "757629c902b7c9f2",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "read states ",
+        "func": "const axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");;\nlet km200_server = global.get(\"km200_ip\");\nlet recordings = global.get(\"km200_recordings\");\n\nlet start = new Date();\nawait read_states();\nlet end = new Date();\nlet seconds = Math.abs(end.getTime() - start.getTime()) / 1000;\nnode.status({ fill: \"green\", shape: \"ring\", text: \"run time: \"+seconds+\" seconds\" });\n\n\n// interval: every 2 minutes\n//let interval = setInterval(function () { read_states(); }, 120000); \n\nasync function read_states() {\n    let states = [];\n    states = global.get(\"km200_states\");\n    let url, state;\n\n    for (let i=0; i < states.length-1;i++) {\n        if (states[i].id != undefined) {\n            state = \"/\"+ states[i].id;\n            url = km200_server + state.split(\".\").join(\"/\");\n            msg.payload = await km200_get(url);        \n            node.status({ fill: \"green\", shape: \"ring\", text: msg.payload.id + \":\"+msg.payload.value });\n            node.send(msg); \n            //await sleep(100);\n        }\n    }\n    node.status({ fill: \"green\", shape: \"ring\", text: \"finished\"});\n\n}\n\nasync function km200_get(url) {\n    const options =\n    {\n        url: url,\n        method: \"GET\",\n        status: [200],\n        timeout: 20000,\n        encoding: \"utf8\",\n        port: 80,\n        headers: { \"Accept\": \"application/json\", \"agent\": \"TeleHeater/2.2.3\", \"User-Agent\": \"TeleHeater/2.2.3\" }\n    };\n    let data;\n\n    try {\n        const body = (await axios(options)).data\n        data = km200_decrypt(body); \n    }\n    catch (e) { data = \"\"; }\n    return data;\n}\n\nfunction km200_decrypt(input) {\n    // Decrypt\n    let output;\n    try {\n        let s = Buffer.from(cipher.decrypt(Buffer.from(input, \"base64\"), 16)).toString(\"utf8\");\n        while (s.charCodeAt(s.length - 1) === 0) s = s.slice(0, s.length - 1);\n        output = JSON.parse(s);\n    } catch (e) { }\n    return output;\n}\n\n\nfunction sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 340,
+        "wires": [
+            [
+                "eaa622875c83d007"
+            ]
+        ]
+    },
+    {
+        "id": "42ab315935d8e296",
+        "type": "comment",
+        "z": "8a416cbc6ae4e029",
+        "name": "process changes done in ha",
+        "info": "",
+        "x": 160,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "542a078c90642ab4",
+        "type": "inject",
+        "z": "8a416cbc6ae4e029",
+        "name": "Every 2 minutes",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "120",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "120",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "757629c902b7c9f2"
+            ]
+        ]
+    },
+    {
+        "id": "82f3a62a5ede54d3",
+        "type": "comment",
+        "z": "8a416cbc6ae4e029",
+        "name": "first init of recordings - only once after preparing recordings.json !!! ",
+        "info": "",
+        "x": 280,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "05a356d48d34701d",
+        "type": "inject",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "/homeassistant/recordings.json",
+        "payloadType": "str",
+        "x": 110,
+        "y": 660,
+        "wires": [
+            [
+                "d1c20ee385921714"
+            ]
+        ]
+    },
+    {
+        "id": "38aa641c0df80602",
+        "type": "comment",
+        "z": "8a416cbc6ae4e029",
+        "name": "poll km200 entities and recordings ",
+        "info": "",
+        "x": 180,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "ed5ba7ac52468fcd",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "loop power recordings",
+        "func": "let mysql = global.get('mysql2');\nconst axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");;\nlet km200_server = global.get(\"km200_ip\");\nlet query, state;\n\nconst db = {\n    host: global.get(\"dbhost\"),\n    user: global.get(\"dbuser\"),\n    password: global.get(\"dbpw\"),\n    database: global.get(\"db\")\n};\n\nconst con = await mysql.createConnection(db);\nlet r = msg.payload;\n\nlet daten = [];\ntry {\nfor (let i = 0; i < r.length; i++) {\n    let power = true;\n    if (r[i].id.indexOf(\"temp\") > -1) power = false;\n    if (r[i].id.indexOf(\"Temp\") > -1) power = false;\n    let id = r[i].id;\n    let uid = r[i].uid;\n    let name = r[i].name;\n\n    if (power) {\n        let idm = await meta(uid,name);\n        node.status({ fill: \"green\", shape: \"ring\", text: id + \"  \" + idm});\n        await del(idm);\n        let uom = \"kWh\";if (id.indexOf(\"temp\") > -1) uom = \"°C\";\n        daten.length = 0;\n        daten = await months(id);\n        let sum = await ins(daten, idm,0);\n        let sum1 = sum;\n        daten.length = 0;\n        daten = await hours(id);\n        await ins(daten,idm,sum);\n    }\n}\n} catch (e) {}\nnode.status({ fill: \"green\", shape: \"ring\", text: \"finished\" });\nawait con.end();\n\n\n\nasync function meta (uid,name) {\n    const con = await mysql.createConnection(db);\n    let query = \"INSERT INTO statistics_meta (statistic_id, source, unit_of_measurement, has_mean, has_sum, name) \";\n    //query += \"VALUES ('gas:\" + uid + \"','recording','kWh','0','1','\" + name + \"') \"\n    query += \"VALUES ('\" + uid + \"','recording','kWh','0','1','\" + name + \"') \"\n    query += \"ON DUPLICATE KEY UPDATE name = name ;\"; \n    await con.execute(query);\n    query = \"SELECT * FROM statistics_meta where statistic_id = '\" + uid + \"';\";\n    let [rows, fields] = await con.execute(query);\n    let id = rows[0].id;\n    con.close();\n    return id;\n}\n\n\nasync function del(idm) {   \n    const con = await mysql.createConnection(db);\n    let query = \"delete from statistics where metadata_id = \" + idm + \";\";\n    await con.execute(query);\n    //query = \"delete from statistics_short_term where metadata_id = \" + idm + \";\";\n    //await con.execute(query);\n    con.close();\n}\n\n\n\nasync function months(r) {\n    let statename = \"\";\n    const datum = new Date();\n    let data;\n\n    const feld = r + \"?interval=\";\n    let jahr = datum.getFullYear();\n    let monat = datum.getMonth() + 1;\n    const ja = jahr;\n    const ma = datum.getMonth() + 1;\n    const da = datum.getDate();\n    let daten =[];\n    for (let ii = 0; ii < 3; ii++) {\n        const url1 = feld + jahr;\n        try { data = await km200_get(url1); }\n        catch (error) { data = \" \"; }\n        node.status({ fill: \"green\", shape: \"ring\", text: r+\"  year :\" + ii + \"  \" + jahr });\n        if (data != \" \") {\n\n            try {\n                for (let iii = 0; iii < data.recording.length; iii++) {\n                    if (data.recording[iii].c != 0) {\n                        const m = iii + 1;\n                        const tsa = new Date();\n                        const days = new Date(jahr, m, 0).getDate();\n\n                        const t = jahr + \"-\" + m.toString() + \"-\" + days;\n                        const ts = new Date(t).getTime();\n\n                        let multi = 1;\n                        let wert = 0;\n                        if (data.recording[iii].c > 0) multi = 60 * 24 * days / data.recording[iii].c;\n\n                        wert = data.recording[iii].y * multi;\n                        wert = Math.round(wert * 100 / 6) / 1000;\n                        if (wert < 0) wert = 0;\n\n                        const tsr = ts;\n                        const dt = time(ts);\n                        const dtr = time(ts);\n                        let p = true;\n\n                        if (ii == 0 && m > ma - 2) p = false;\n                        if (ii == 1 && ma == 1 && m == 12) p = false;\n\n                        if (p) daten.push({ ts: ts, dt: dt, dtr: dtr, val: wert });\n                    }\n                }\n            } catch (e) { }\n        }\n        jahr = jahr - 1;\n    }\n    return daten;\n}\n\nasync function hours(r) {\n    let statename = \"\";\n    const datum = new Date();\n    const ya = datum.getFullYear();\n    const ma = datum.getMonth() + 1;\n    const da = datum.getDate();\n\n    let days = 31; // Dezember previous year\n    if (ma > 1) days = new Date(ya, ma - 1, 0).getDate(); // previous month\n\n    let data, daten = [];\n    const feld = r + \"?interval=\";\n\n    let count = da + days;\n    \n    for (let i = 0; i < count; i++) {\n        const url1 = feld + datum.getFullYear() + \"-\" + (datum.getMonth() + 1) + \"-\" + datum.getDate();\n        try { data = await km200_get(url1); }\n        catch (error) { data = \" \"; }\n        if (data != \" \") {\n            let ut1 = new Date(data.interval).getTime();\n            let offset = new Date(data.interval).getTimezoneOffset();\n            //ut1 = ut1 + offset * 60000;\n            node.status({ fill: \"green\", shape: \"ring\", text: r + \"  \" + i +\"/\" + count});\n            \n            try {\n                for (let ii = 0; ii < data.recording.length; ii++) {\n                    let wert = 0;\n                    if (data.recording[ii].c > 30) {\n                        let multi = 1;\n                        if (data.recording[ii].c > 0) multi = 60 / data.recording[ii].c;\n                        wert = data.recording[ii].y * multi;\n                        wert = Math.round(wert * 100 / 6) / 1000;\n                        if (wert < 0) wert = 0;\n                        const ts = ut1 + ii * 3600000;\n                        const dt = time(ts);\n                        daten.push({ ts: ts, dt: dt, dtr: dt, val: wert });\n                    }\n                }\n            } catch (e) { }\n        }\n        datum.setDate(datum.getDate() - 1);\n    }\n    return daten;\n}\n\nfunction time(UNIX_timestamp) {\n    let a = new Date(UNIX_timestamp);\n    let months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];\n    let year = a.getUTCFullYear();\n    let m = a.getUTCMonth() + 1;\n    let month = ('00' + m).slice(-2);\n    let date = ('00' + a.getUTCDate()).slice(-2);\n    let hour = ('00' + a.getUTCHours()).slice(-2);\n    let min = ('00' + a.getMinutes()).slice(-2);\n    let sec = ('00' + a.getSeconds()).slice(-2);\n    let time = year + '-' + month + '-' + date + ' ' + hour + ':' + min + ':' + sec;\n    return time;\n}\n\n\nasync function km200_get(url) {\n    const urls = km200_server + url.split(\".\").join(\"/\");\n    const options = {\n        url: urls,\n        method: \"GET\",\n        status: [200],\n        timeout: 20000,\n        encoding: \"utf8\",\n        port: 80,\n        headers: { \"Accept\": \"application/json\", \"agent\": \"TeleHeater/2.2.3\", \"User-Agent\": \"TeleHeater/2.2.3\" }\n    };\n    let data;\n\n    try {const body = (await axios(options)).data; data = km200_decrypt(body);}\n    catch (e) { data = \"\"; }\n\n    if (data == \"\") {\n        try { const body = (await axios(options)).data; data = km200_decrypt(body); }\n        catch (e) { data = \"\"; }\n    }\n\n    if (data == \"\") {\n        try { const body = (await axios(options)).data; data = km200_decrypt(body); }\n        catch (e) { data = \"\"; }\n    }\n\n    if (data == \"\") {\n        msg.payload = \"*** error http-get \" + url;\n        node.send(msg);\n    }\n\n    return data;\n}\n\nfunction km200_decrypt(input) {\n    // Decrypt\n    let output;\n    try {\n        let s = Buffer.from(cipher.decrypt(Buffer.from(input, \"base64\"), 16)).toString(\"utf8\");\n        while (s.charCodeAt(s.length - 1) === 0) s = s.slice(0, s.length - 1);\n        output = JSON.parse(s);\n    } catch (e) { }\n    return output;\n}\n\n\n\nasync function ins(v, idm, sum) {\n    let query, ts, val;\n\n    function SortArray(x, y) {\n        if (x.ts < y.ts) { return -1; }\n        if (x.ts > y.ts) { return 1; }\n        return 0;\n    }\n    const s = v.sort(SortArray);\n    //let ins = \"insert into statistics (created, start, state, sum, metadata_id) values \";\n    let ins = \"insert into statistics (created_ts, start_ts, last_reset_ts, state, sum, metadata_id) values \";\n\n    for (let i5 = 0; i5 < s.length; i5++) {\n        ts = s[i5].ts / 1000;\n        sum = sum + s[i5].val;\n        //sum = parseInt(sum * 100) / 100;\n        //val = parseInt(s[i5].val * 100) / 100;\n        val = sum;\n        query = ins + \"('\" + ts + \"','\" + ts + \"','\" + ts + \"',\" + val + \",\" + sum + \",\" + idm + \") \";\n        query += \"ON DUPLICATE KEY UPDATE state = \" + s[i5].val + \", sum = \" + sum + \";\";\n        node.status({ fill: \"green\", shape: \"ring\", text: \"db insert: \" + i5 + \"/\" + s.length });\n        await con.execute(query);\n    }\n    return sum;\n}\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 660,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2bfad05935badcde",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "process recordings ",
+        "func": "var mysql = global.get('mysql2');\nconst axios = global.get(\"axios\");\nconst cipher = global.get(\"cipher\");;\nlet km200_server = global.get(\"km200_ip\");\n\nlet r = msg.payload, query, state;\n\nconst db = {\n    host: global.get(\"dbhost\"),\n    user: global.get(\"dbuser\"),\n    password: global.get(\"dbpw\"),\n    database: global.get(\"db\")\n};\nconst con = await mysql.createConnection(db);\n\nfor (let i = 0; i < r.length; i++) {\n    let power = true;\n    if (r[i].id.indexOf(\"temp\") > -1) power = false;\n    if (r[i].id.indexOf(\"Temp\") > -1) power = false;    \n    state = r[i].id;\n\n    if (power) {\n        node.status({ fill: \"green\", shape: \"ring\", text: state});\n        let uid = r[i].uid;\n        \n        query =\"SELECT * FROM statistics_meta where statistic_id = '\" + uid + \"';\";\n        msg.query = query;\n\n        let [rows,fields] = await con.execute(query);\n        let id = rows[0].id;\n\n        query = \"select * from statistics where metadata_id = \" + id + \" order by start_ts desc;\";\n        [rows, fields] = await con.execute(query);\n        await read_km200(state,rows);\n\n        msg.payload = id;\n        msg.rows = rows;\n        node.send(msg);\n    }\n}\nnode.status({ fill: \"green\", shape: \"ring\", text: \"finished\" });\nawait con.end();\n\n\nasync function read_km200(state,rows) {\n    let p = rows[0];\n    const da = new Date(); \n    let ds = new Date(p.start_ts * 1000);\n    let diff = Math.ceil((da.getTime() - ds.getTime()) / (1000 * 3600 * 24)) + 1;\n    if (diff > 61) diff = 61;\n\n    let uom = \"kWh\";\n    await hours(state, p, diff, uom);\n}\n\n\nasync function hours(r, p, diff, uom) {\n    let statename = \"\";\n    const datum = new Date();\n\n    const ya = datum.getFullYear();\n    const ma = datum.getMonth() + 1;\n    const da = datum.getDate();\n\n    let days = 31; // Dezember previous year\n    if (ma > 1) days = new Date(ya, ma - 1, 0).getDate(); // previous month\n\n    let daten = [], data;\n    const feld = r + \"?interval=\";\n\n    for (let i = 0; i < diff; i++) {\n        const url1 = feld + datum.getFullYear() + \"-\" + (datum.getMonth() + 1) + \"-\" + datum.getDate();\n        try { data = await km200_get(url1); }\n        catch (error) { data = \" \"; }\n        let text = \"day :\" + i + \"  \" + datum.getFullYear() + \"-\" + (datum.getMonth() + 1) + \"-\" + datum.getDate();\n        node.status({ fill: \"green\", shape: \"ring\", text: text });\n        if (data != \" \") {\n            let ut1 = new Date(data.interval).getTime();\n            let offset = new Date(data.interval).getTimezoneOffset();\n            //ut1 = ut1 + offset * 60000;\n            try {\n                for (let ii = 0; ii < data.recording.length; ii++) {\n                    if (data.recording[ii].c != 0) {\n                        let multi = 1;\n                        let wert = 0;\n                        if (data.recording[ii].c > 0) multi = 60 / data.recording[ii].c;\n\n                        wert = data.recording[ii].y * multi;\n                        wert = Math.round(wert * 10 / 6) / 100;\n                        if (wert < 0) wert = 0;\n\n                        const ts = ut1 + ii * 3600000;\n                        const dt = time(ts);\n\n                        if (ts > (p.start_ts * 1000)) {\n                            p.sum += wert;\n                            p.sum = parseInt(p.sum * 100) / 100;\n                            daten.push({ ts: ts, val: wert, sum: p.sum, id: p.metadata_id });\n                        }\n                    }\n                }\n            } catch (e) { }\n        }\n        datum.setDate(datum.getDate() - 1);\n    }\n    \n    msg.payload = daten;\n    node.send(msg);\n    await insert (state,daten);\n}\n\n\n\nasync function insert (state, v) {\n\n    let id = state, query, ts, val;\n    let uid = id.split('/').join('_').substr(1);\n\n    function SortArray(x, y) {\n        if (x.ts < y.ts) { return -1; }\n        if (x.ts > y.ts) { return 1; }\n        return 0;\n    }\n    const s = v.sort(SortArray);\n    let ins = \"insert into statistics (created_ts, start_ts, last_reset_ts, state, sum, metadata_id) values \";\n\n    for (let i = 0; i < s.length; i++) {\n        ts = s[i].ts / 1000;\n        query = ins + \"('\" + ts + \"','\" + ts + \"','\" + ts + \"',\"  + s[i].val + \",\" + s[i].sum + \",\" + s[i].id + \") \";\n        query += \"ON DUPLICATE KEY UPDATE state = \" + s[i].val + \", sum = \" + s[i].sum + \";\";\n        await con.execute(query);\n    }\n}\n\nfunction time(UNIX_timestamp) {\n    let a = new Date(UNIX_timestamp);\n    let months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];\n    let year = a.getFullYear();\n    let m = a.getMonth() + 1;\n    let month = ('00' + m).slice(-2);\n    let date = ('00' + a.getDate()).slice(-2);\n    let hour = ('00' + a.getHours()).slice(-2);\n    let min = ('00' + a.getMinutes()).slice(-2);\n    let sec = ('00' + a.getSeconds()).slice(-2);\n    let time = year + '-' + month + '-' + date + ' ' + hour + ':' + min + ':' + sec;\n    return time;\n}\n\nasync function km200_get(url) {\n    const urls = km200_server + url.split(\".\").join(\"/\");\n    const options = {\n        url: urls,\n        method: \"GET\",\n        status: [200],\n        timeout: 20000,\n        encoding: \"utf8\",\n        port: 80,\n        headers: { \"Accept\": \"application/json\", \"agent\": \"TeleHeater/2.2.3\", \"User-Agent\": \"TeleHeater/2.2.3\" }\n    };\n    let data;\n\n    try { const body = (await axios(options)).data; data = km200_decrypt(body); }\n    catch (e) { data = \"\"; }\n\n    if (data == \"\") {\n        try { const body = (await axios(options)).data; data = km200_decrypt(body); }\n        catch (e) { data = \"\"; }\n    }\n\n    if (data == \"\") {\n        try { const body = (await axios(options)).data; data = km200_decrypt(body); }\n        catch (e) { data = \"\"; }\n    }\n\n    if (data == \"\") {\n        msg.payload = \"*** error http-get \" + url;\n        node.send(msg);\n    }\n\n    return data;\n}\n\nfunction km200_decrypt(input) {\n    // Decrypt\n    let output;\n    try {\n        let s = Buffer.from(cipher.decrypt(Buffer.from(input, \"base64\"), 16)).toString(\"utf8\");\n        while (s.charCodeAt(s.length - 1) === 0) s = s.slice(0, s.length - 1);\n        output = JSON.parse(s);\n    } catch (e) { }\n    return output;\n}\n\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "296b5107c13163d4",
+        "type": "switch",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "on",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 290,
+        "y": 420,
+        "wires": [
+            [
+                "97e7c03e376a9eb2"
+            ]
+        ]
+    },
+    {
+        "id": "eaa622875c83d007",
+        "type": "function",
+        "z": "8a416cbc6ae4e029",
+        "name": "k200 discovery",
+        "func": "let axios = global.get(\"axios\");\nlet server_mqtt = global.get(\"server\") + \"services/mqtt/publish\";\nlet server = global.get(\"server\") + \"states/\";\nlet bearer = \"Bearer \" + global.get(\"token\");\nlet value;\n\n\ntry {\n    let id = msg.payload.id;\n    let ida = id.split(\"/\");\n    let native = msg.payload;\n\n    msg.value = msg.payload.value;\n\n    let device = ida[1];\n    let l = 2;\n\n    try {\n        let i2 = ida[2].substr(0,2);\n        let i3 = ida[2].substr(0,3);\n        let i6 = ida[2].substr(0,6);\n        if (i2 == \"hc\")  {device =  ida[1] +\" \" + ida[2];l = 3;}\n        if (i3 == \"dhw\") {device =  ida[1] +\" \" + ida[2];l = 3;}\n        if (i2 == \"hs\")  {device =  ida[1] +\" \" + ida[2];l = 3;}\n        if (i6 == \"holida\")  {device =  ida[1] +\" \" + ida[2];l = 3;}\n        if (i6 == \"energy\")  {device =  ida[1] +\" \" + ida[2];l = 3;}\n    } catch(e) {}\n\n    let uid = id.split('/').join('_').substr(1);\n\n    let uom = msg.payload.unitOfMeasure;\n    if (uom == \"C\") uom = \"°C\";\n    if (uom == \"mins\") uom = \"Minuten\";\n    value = msg.payload.value;\n\n    let field = \"\";\n\n    for (let i = l;i < ida.length;i++){\n        field += ida[i] + \" \"; \n    }\n    field = field.trim();\n\n    let e_type = \"sensor\";\n\n    if (msg.payload.writeable == 1) {\n        switch (msg.payload.type) {\n        case \"floatValue\":\n            e_type = \"number\";\n            break;\n        case \"stringValue\":\n            try {\n            if (msg.payload.allowedValues.length > 1) e_type = \"select\";\n            } catch(e) {e_type = \"sensor\"}\n            break;\n        case \"arrayData\":\n            e_type = \"sensor\";\n            value = JSON.stringify(msg.payload.values);\n            //value = value.split('\"').join('');\n            break;\n\n        case \"switchProgram\":\n            e_type = \"sensor\";        \n            let t,th,tm;\n            for (let i = 0; i < msg.payload.switchPoints.length;i++ ) {\n                t = msg.payload.switchPoints[i].time;\n                t = t / 60;\n                th = parseInt(t);\n                tm = (t-th)*60/100;\n                t = th+tm;\n                msg.payload.switchPoints[i].time = t.toFixed(2);\n            }\n            value = JSON.stringify(msg.payload.switchPoints);\n            value = value.split(':').join('');\n            value = value.split('\"').join('');\n            value = value.split('dayOfWeek').join('');\n            value = value.split('setpoint').join('');\n            value = value.split('time').join('');\n            value = value.split('.').join(':');\n            value = value.substr(0,255);\n            break;        \n        default:\n                e_type = \"sensor\";\n        }\n    }\n    else {\n        e_type = \"sensor\";\n        switch (msg.payload.type) {\n        case \"floatValue\":\n            e_type = \"sensor\";\n            break;\n        case \"stringValue\":\n            e_type = \"sensor\";\n            break;\n        case \"arrayData\":\n            e_type = \"sensor\";\n            value = JSON.stringify(msg.payload.values); \n            break;\n        case \"errorList\":\n            e_type = \"sensor\";\n            value = JSON.stringify(msg.payload.values);\n            if (value == \"[]\") value = \"\";\n            break;        \n        case \"systeminfo\":\n            e_type = \"sensor\";\n            value = JSON.stringify(msg.payload.values);\n            //value = value.substring(0,15);\n            break;\n        default:\n        }    \n    }\n\n    let pl = {\n        \"~\":\"homeassistant/\" + e_type + \"/km200/\" + uid,\n        \"name\": field,\n        \"uniq_id\":uid,\n        \"retain\": true,\n        \"stat_t\": \"~/state\",\n        \"cmd_t\": \"~/set\",\n        \"object_id\":uid,\n        \"dev\":{\n            name: \"KM200 \"+device,\n            \"mf\": \"Buderus\",\n            \"mdl\": \"KM200\",\n            \"ids\":[\"km200-\"+device]\n        }\n    };\n\n    if (msg.payload.type == \"floatValue\") pl.unit_of_meas = uom;\n    if (msg.payload.type == \"systeminfo\") value = JSON.stringify(msg.payload.values);\n\n    if (msg.payload.writeable == 1 && msg.payload.type == \"floatValue\") {\n        \n        if (typeof msg.payload.minValue !== \"undefined\") {\n            let min = msg.payload.minValue;\n            if (field == \"temporaryRoomSetpoint\") min = -1;\n            pl.min = min;\n        }\n        if (typeof msg.payload.maxValue !== \"undefined\") {\n            pl.max = msg.payload.maxValue;\n        }\n        if (uom == \"°C\") pl.ic = \"mdi:coolant-temperature\";\n        pl.step = 0.5;\n    }\n\n    if (e_type == \"switch\") {\n        pl.payload_off = msg.payload.allowedValues[0];\n        pl.payload_on  = msg.payload.allowedValues[1];\n    }\n\n    if (e_type == \"sensor\" && msg.payload.type == \"stringValue\") {\n        if (msg.payload.allowedValues != undefined) {\n            pl.options = [];\n            for (let i = 0; i < msg.payload.allowedValues.length; i++) {\n                pl.options.push(msg.payload.allowedValues[i]);\n            }\n            pl.device_class = \"enum\";\n        }\n    }\n\n    if (e_type == \"select\") {\n        pl.options = [];\n        for (let i = 0;i < msg.payload.allowedValues.length;i++) {\n            let v = msg.payload.allowedValues[i];\n            if (v == \"\") v = \"-\";\n            pl.options.push(v);\n        }\n        if (value == \"\") value = \"-\";\n      \n    }    \n\n    \n    let topic = \"homeassistant/\" + e_type + \"/km200/\" + uid + \"/config\";\n    let data = { \"payload\": JSON.stringify(pl), \"topic\": topic, \"retain\": \"True\" };\n    await postmqtt(JSON.stringify(data));\n    msg.payload = data;\n    node.send(msg);\n    \n\n    //if (value == \"\") value = \"-\";\n    if (typeof value == \"string\") {\n        value = value.substring(0,254);\n    }\n\n\n    topic = \"homeassistant/\"+e_type+\"/km200/\" + uid + \"/state\";\n    data = { \"payload\": value, \"topic\": topic, \"retain\": \"True\" };\n    await postmqtt(JSON.stringify(data));\n\n} catch(e) {}\n\n\nasync function postmqtt(data) {\n    const urls = server_mqtt;\n\n    let response = await axios({\n        method: 'post',\n        url: urls,\n        data: data,\n        headers: {\n            \"Authorization\": bearer,\n            \"content-type\": \"application/json\",\n        }\n    });\n    return response;\n}",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d1c20ee385921714",
+        "type": "file in",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "filename": "payload",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 380,
+        "y": 660,
+        "wires": [
+            [
+                "aced9342a4a06ecf"
+            ]
+        ]
+    },
+    {
+        "id": "aced9342a4a06ecf",
+        "type": "json",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 530,
+        "y": 660,
+        "wires": [
+            [
+                "ed5ba7ac52468fcd"
+            ]
+        ]
+    },
+    {
+        "id": "97e7c03e376a9eb2",
+        "type": "file in",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "filename": "/homeassistant/recordings.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 510,
+        "y": 420,
+        "wires": [
+            [
+                "d2f40e6f58d27052"
+            ]
+        ]
+    },
+    {
+        "id": "d2f40e6f58d27052",
+        "type": "json",
+        "z": "8a416cbc6ae4e029",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 710,
+        "y": 420,
+        "wires": [
+            [
+                "2bfad05935badcde"
+            ]
+        ]
+    },
+    {
+        "id": "ce70579ba0136f4d",
+        "type": "timerswitch",
+        "z": "8a416cbc6ae4e029",
+        "name": "Every hour",
+        "ontopic": "",
+        "offtopic": "",
+        "onpayload": "on",
+        "offpayload": "off",
+        "disabled": false,
+        "schedules": [
+            {
+                "on_h": "00",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "00",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "01",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "01",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "02",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "02",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "03",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "03",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "04",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "04",
+                "off_m": "06",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "05",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "05",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "06",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "06",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "07",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "07",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "08",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "08",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "09",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "09",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "10",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "10",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "11",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "11",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "12",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "12",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "13",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "13",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "14",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "14",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "15",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "15",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "16",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "16",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "17",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "17",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "18",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "18",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "19",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "19",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "20",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "20",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "21",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "21",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "22",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "22",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            },
+            {
+                "on_h": "23",
+                "on_m": "02",
+                "on_s": "00",
+                "off_h": "23",
+                "off_m": "03",
+                "off_s": "00",
+                "valid": true
+            }
+        ],
+        "x": 130,
+        "y": 420,
+        "wires": [
+            [
+                "296b5107c13163d4"
+            ]
+        ]
+    },
+    {
+        "id": "55818f4589a91a79",
+        "type": "mqtt-broker",
+        "name": "mqtt",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

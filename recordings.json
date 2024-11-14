@@ -1,0 +1,6 @@
+[
+    {"id":"/recordings/heatSources/actualPower","uid":"gas:recordings_heatSources_actualPower","name":"Gas (km200)"},
+    {"id":"/recordings/heatSources/actualCHPower","uid":"gas:recordings_heatSources_actualCHPower","name":"Gas Heating (km200)"},
+    {"id":"/recordings/heatSources/actualDHWPower","uid":"gas:recordings_heatSources_actualDHWPower","name":"Gas DHW (km200)"}
+]
+    
