@@ -6,6 +6,9 @@ All enties read are then build in Home Assistant using MQTT discovery.
 Aditionally energy consumption data for last 12 months can be loaded into the statistic database when MariaDB Database is used.
 Energy consumption for heating and warm water consumption is then available with the energy dashboard. (only tested for gas boilers)
 
+The heating system must be available within local LAN for API calls. (km50, km100, km200, km300 and IP-inside)
+New Bosch-Group Cloud-Gateways (MX300 / EasyControl ...) are not supported since they do not support LAN API ! 
+
 ***
 
 The following technical prerequisites are needed:
@@ -58,10 +61,12 @@ I put my example file here: https://github.com/tp1de/home-assistant-node-red-km2
 
 **Do not create the recordings.json file short before full hour to avoid running the hourly jobs before you have initialized the data once !!!**
 
-You then need to run the last flow once to read all available records and inset them into the statistics database.
+You then need to run the last flow once to read all available records and insert them into the statistics database.
 When this done every hour updates (new entries) are added. This is done 2 minutes pas every hour. (km200 needs to prepare the data first).
+These statistic databse entries do not have any sensor assigned to. Just metadata attributes are created.
 
-The km200 entities are updated every 120 second.
+The km200 entities are updated every 120 second. Be carefull to lower this time. 
+The average processing time can be observed in NR and is fluctuating quite a lot. 
 
 ***
 
