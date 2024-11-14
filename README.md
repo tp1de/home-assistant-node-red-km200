@@ -19,13 +19,9 @@ add :
   functionGlobalContext: {
 
     rijndael:require("rijndael-js"),
-
     crypto:require("crypto"),
-
     axios:require("axios"),
-
     mysql2:require("mysql2/promise"),
-
   },
 
 
