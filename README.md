@@ -20,18 +20,17 @@ The following technical prerequisites are needed:
 
   - To access this file I recommend to install the file editor addon. (Config: Enforce Basepath to false) (approx. line 155)
 
-    - functionGlobalContext: {
-   
+    - functionGlobalContext: {   
        rijndael:require("rijndael-js"),
        crypto:require("crypto"),
        axios:require("axios"),
        mysql2:require("mysql2/promise"),
      },
 
-and the npm modules in Node-Red Config and restart NR.
+- and the npm modules in Node-Red Config and restart NR.
 
-Node-Red Config: Add 4 npm packages: rijndael-js, crypto, axios, mysql2
-![alt text](image.png)
+- Node-Red Config: Add 4 npm packages: rijndael-js, crypto, axios, mysql2
+- ![alt text](image.png)
 
 5.  Install in node-red the following module using pellet manager: node-red-contrib-timerswitch
 
