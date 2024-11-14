@@ -63,6 +63,11 @@ The km200 entities are updated every 120 second.
 
 ***
 
+Any updates within ha while changing values are captured by mqtt topics watched. 
+The updates are then send to km200 while encrypting and sending using API interface.
+
+***
+
 When availabe the created energy consumption recordings can be added to the ewnergy dashboard.
 When starting approx 12 months of history is available. This timeframe gets extended when running permanently.
 When you run the initializing flow again you delete the records.
