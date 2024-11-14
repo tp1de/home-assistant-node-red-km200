@@ -27,14 +27,11 @@ The following technical prerequisites are needed:
        mysql2:require("mysql2/promise"),
      },
 
-- and the npm modules in Node-Red Config and restart NR.
-
-- Node-Red Config: Add 4 npm packages: rijndael-js, crypto, axios, mysql2
-- ![alt text](image.png)
+- Node-Red Config: Add 4 npm packages: rijndael-js, crypto, axios, mysql2 ![alt text](image.png) and the npm modules in Node-Red Config and restart NR.
 
 5.  Install in node-red the following module using pellet manager: node-red-contrib-timerswitch
 
-5.	a longterm api access token is generated in HA
+6.	a longterm api access token is generated in HA
 
 7.  To decrypt the km200 API messages you need 2 passwords.
   - The gateway password wich is on a label on boiler or gateway (xxxx-xxxx-xxxx-xxxx)
