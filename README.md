@@ -49,34 +49,23 @@ The flow should be disabled - you need to enable manually.
 *** 
 
 When enabled the first flow (from top) should start and detect all available entities and recordings.
-The entities are created with mqtt discovery.
+The entities are created with mqtt discovery. 
 
 The second flow creates a file km200.json containing all recordings. (wait until they are found) 
 This needs only to be done once.
 The recordings need a file recordings.json which is a copy of km200.json you need to prepare by selecting the entities you need and changing the names to your wish.
-I put my example file here: 
+I put my example file here: https://github.com/tp1de/home-assistant-node-red-km200/blob/main/recordings.json
 
+You then need to run the last flow once to read all available records and inset them into the statistics database.
+When this done every hour updates (new entries) are added. This is done 2 minutes pas every hour. (km200 needs to prepare the data first).
 
+The km200 entities are updated every 120 second.
 
+***
 
-With these prerequisites the data processing flow consists of:
-
-
-
-
-in node-red the following module needs to installed using pellet manager: node-red-contrib-timerswitch
-
-
-
-
-
-The flow will create the following devices within MQTT:
-
-![alt text](image-3.png)
-
-
-
-
+When availabe the created energy consumption recordings can be added to the ewnergy dashboard.
+When starting approx 12 months of history is available. This timeframe gets extended when running permanently.
+When you run the initializing flow again you delete the records.
 
 Energy Dashboard:
 
