@@ -39,7 +39,8 @@ The following technical prerequisites are needed:
 
 ***
 
-Before loading the flow you need to define the config file km200.yaml within homeassistant directory: https://github.com/tp1de/home-assistant-node-red-km200/blob/main/km200.yaml
+Before loading the flow you need to define the config file km200.yaml within homeassistant directory: 
+https://github.com/tp1de/home-assistant-node-red-km200/blob/main/km200.yaml
 
 *** 
 
